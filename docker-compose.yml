@@ -1,0 +1,48 @@
+version: '2.1'
+
+services:
+  redis:
+    image: redis:latest
+    expose:
+    - 6379
+
+  web:
+    build:
+      context: .
+    environment:
+      CELERY_RESULT_BACKEND: 'redis://redis:6379'
+      CELERY_BROKER_URL: 'redis://redis:6379'
+      MAIL_USERNAME: ''
+      MAIL_PASSWORD: ''
+      PYTHONUNBUFFERED: 0
+    restart: always
+    command: python3 app.py
+    volumes:
+      - .:/app
+    ports:
+      - 5000:5000
+    links:
+      - worker
+      - redis
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+    environment:
+      CELERY_RESULT_BACKEND: 'redis://redis:6379'
+      CELERY_BROKER_URL: 'redis://redis:6379'
+      MAIL_USERNAME: ''
+      MAIL_PASSWORD: ''
+      PYTHONUNBUFFERED: 0
+      C_FORCE_ROOT: "yes"
+    restart: always
+    volumes:
+      - .:/app
+    command: celery worker -A app.celery --loglevel=info
+    links:
+      - redis
+    depends_on:
+      - redis
+
